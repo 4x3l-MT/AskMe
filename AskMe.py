@@ -204,32 +204,33 @@ def cancelar_apagado():
     os.system("shutdown /a")
     notificar("AskMe", "Apagado cancelado")
 
-# ── Abrir aplicaciones ─────────────────────────────────────
+# ── Abrir/cerrar aplicaciones ──────────────────────────────
+# Formato: nombre_key: ([aliases], ejecutable_para_abrir, proceso_para_cerrar)
 APPS = {
-    "chrome":        (["chrome", "google chrome", "navegador"],             "chrome"),
-    "firefox":       (["firefox", "mozilla"],                               "firefox"),
-    "edge":          (["edge", "microsoft edge"],                           "msedge"),
-    "notepad":       (["notepad", "bloc de notas", "notas"],                "notepad.exe"),
-    "calculadora":   (["calculadora", "calculator"],                        "calc.exe"),
-    "explorador":    (["explorador", "explorador de archivos"],             "explorer.exe"),
-    "word":          (["word", "microsoft word"],                           "winword"),
-    "excel":         (["excel", "microsoft excel"],                         "excel"),
-    "powerpoint":    (["powerpoint", "power point"],                        "powerpnt"),
-    "spotify":       (["spotify"],                                          "spotify"),
-    "discord":       (["discord"],                                          "discord"),
-    "teams":         (["teams", "microsoft teams"],                         "teams"),
-    "zoom":          (["zoom"],                                             "zoom"),
-    "vscode":        (["visual studio code", "vs code", "codigo", "vscode"],"code"),
-    "paint":         (["paint"],                                            "mspaint.exe"),
-    "cmd":           (["cmd", "consola", "simbolo del sistema"],            "cmd.exe"),
-    "powershell":    (["powershell"],                                       "powershell.exe"),
-    "task manager":  (["administrador de tareas", "task manager"],          "taskmgr.exe"),
-    "configuracion": (["configuracion", "ajustes", "settings"],             "ms-settings:"),
+    "chrome":        (["chrome", "google chrome", "navegador"],              "chrome",        "chrome.exe"),
+    "firefox":       (["firefox", "mozilla"],                                "firefox",       "firefox.exe"),
+    "edge":          (["edge", "microsoft edge"],                            "msedge",        "msedge.exe"),
+    "notepad":       (["notepad", "bloc de notas", "notas"],                 "notepad.exe",   "notepad.exe"),
+    "calculadora":   (["calculadora", "calculator"],                         "calc.exe",      "calculator.exe"),
+    "explorador":    (["explorador", "explorador de archivos"],              "explorer.exe",  "explorer.exe"),
+    "word":          (["word", "microsoft word"],                            "winword",       "winword.exe"),
+    "excel":         (["excel", "microsoft excel"],                          "excel",         "excel.exe"),
+    "powerpoint":    (["powerpoint", "power point"],                         "powerpnt",      "powerpnt.exe"),
+    "spotify":       (["spotify"],                                           os.path.expandvars(r"%APPDATA%\Spotify\Spotify.exe"), "spotify.exe"),
+    "discord":       (["discord"],                                           "discord",       "discord.exe"),
+    "teams":         (["teams", "microsoft teams"],                          "teams",         "teams.exe"),
+    "zoom":          (["zoom"],                                              "zoom",          "zoom.exe"),
+    "vscode":        (["visual studio code", "vs code", "codigo", "vscode"], "code",         "code.exe"),
+    "paint":         (["paint"],                                             "mspaint.exe",   "mspaint.exe"),
+    "cmd":           (["cmd", "consola", "simbolo del sistema"],             "cmd.exe",       "cmd.exe"),
+    "powershell":    (["powershell"],                                        "powershell.exe","powershell.exe"),
+    "task manager":  (["administrador de tareas", "task manager"],           "taskmgr.exe",   "taskmgr.exe"),
+    "configuracion": (["configuracion", "ajustes", "settings"],              "ms-settings:",  None),
 }
 
 def abrir_aplicacion(nombre: str):
     nombre = nombre.lower()
-    for app_key, (aliases, cmd) in APPS.items():
+    for app_key, (aliases, cmd, _) in APPS.items():
         if any(alias in nombre for alias in aliases):
             try:
                 subprocess.Popen([cmd], shell=cmd.endswith(":"))
@@ -242,6 +243,37 @@ def abrir_aplicacion(nombre: str):
     except Exception:
         os.system(f"start {nombre}")
     notificar("AskMe", f"Intentando abrir '{nombre}'...")
+
+def cerrar_aplicacion(nombre: str):
+    nombre = nombre.lower()
+    proceso = None
+    app_key = nombre  # fallback
+
+    for key, (aliases, _, proc) in APPS.items():
+        if any(alias in nombre for alias in aliases):
+            proceso = proc
+            app_key = key
+            break
+
+    # Si no esta en la lista, intentar con el nombre directo
+    if not proceso:
+        proceso = nombre if nombre.endswith(".exe") else nombre + ".exe"
+
+    # Intento 1: cierre normal con taskkill (envia señal de cierre)
+    resultado = os.system(f"taskkill /im {proceso} >nul 2>&1")
+
+    if resultado == 0:
+        notificar("AskMe", f"{app_key} cerrado")
+        return
+
+    # Intento 2: cierre forzado si no respondio
+    time.sleep(3)
+    resultado = os.system(f"taskkill /f /im {proceso} >nul 2>&1")
+
+    if resultado == 0:
+        notificar("AskMe", f"{app_key} cerrado forzosamente")
+    else:
+        notificar("AskMe", f"No se encontro '{app_key}' abierto")
 
 # ── Google Search ──────────────────────────────────────────
 def buscar_en_google(query: str):
@@ -339,14 +371,11 @@ def decir_hora():
 # ── Procesador de comandos ─────────────────────────────────
 def procesar_comando(texto: str) -> bool:
     texto = texto.lower().strip()
-    if "askme" not in texto and "ask me" not in texto:
+    if "tú" not in texto:
         return False
 
     # Extraer accion
-    for kw in ["ask me", "askme"]:
-        if kw in texto:
-            idx = texto.index(kw) + len(kw)
-            break
+    idx = texto.index("tú") + len("tú")
     accion = texto[idx:].strip().lstrip(",").strip()
     print(f"  Accion: '{accion}'")
 
@@ -429,6 +458,17 @@ def procesar_comando(texto: str) -> bool:
             app_nombre = accion
         abrir_aplicacion(app_nombre)
 
+    # Cerrar app
+    elif any(accion.startswith(p) for p in ["cierra", "cerrar", "mata", "termina"]):
+        for prefijo in ["cierra el ", "cierra la ", "cerrar el ", "cerrar la ",
+                        "cierra ", "cerrar ", "mata ", "termina "]:
+            if accion.startswith(prefijo):
+                app_nombre = accion[len(prefijo):]
+                break
+        else:
+            app_nombre = accion
+        cerrar_aplicacion(app_nombre)
+
     else:
         notificar("AskMe", f"No entendi: '{accion}'")
 
@@ -439,7 +479,7 @@ def main():
     print("+----------------------------------------------------------+")
     print("|           ASKME - ASISTENTE DE VOZ OFFLINE               |")
     print("+----------------------------------------------------------+")
-    print("|  Di: 'AskMe [accion]'                                   |")
+    print("|  Di: 'tú [accion]'                                   |")
     print("|                                                          |")
     print("|  VOLUMEN:   sube / baja / silencia el volumen           |")
     print("|  SISTEMA:   apaga / reinicia / suspende                 |")
@@ -462,7 +502,7 @@ def main():
     rec   = vosk.KaldiRecognizer(model, SAMPLE_RATE)
     print("Listo! Escuchando sin internet.\n")
 
-    notificar("AskMe", "Asistente iniciado. Di 'AskMe + accion'")
+    notificar("AskMe", "Asistente iniciado. Di 'tú + accion'")
 
     detener = False
 
