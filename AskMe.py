@@ -38,9 +38,9 @@ from urllib.parse import quote_plus
 # ══════════════════════════════════════════════════════════
 #  CONFIGURACION — EDITA ESTOS VALORES
 # ══════════════════════════════════════════════════════════
-SPOTIFY_CLIENT_ID     = "TU_CLIENT_ID_AQUI"
-SPOTIFY_CLIENT_SECRET = "TU_CLIENT_SECRET_AQUI"
-SPOTIFY_REDIRECT_URI  = "http://localhost:8888/callback"
+SPOTIFY_CLIENT_ID     = "d4784bc8ed6441a6b2a7fa11d65cf592"
+SPOTIFY_CLIENT_SECRET = "2bf57d1288ef421c8dca3a60cc285b28"
+SPOTIFY_REDIRECT_URI  = "http://127.0.0.1:8888/callback"
 # ══════════════════════════════════════════════════════════
 
 MODEL_PATH  = Path(__file__).parent / "model"
@@ -371,11 +371,14 @@ def decir_hora():
 # ── Procesador de comandos ─────────────────────────────────
 def procesar_comando(texto: str) -> bool:
     texto = texto.lower().strip()
-    if "tú" not in texto:
+    PALABRAS_CLAVE = ["tu", "tú", "compu"]  # agrega o cambia las que quieras
+
+    if not any(p in texto for p in PALABRAS_CLAVE):
         return False
 
     # Extraer accion
-    idx = texto.index("tú") + len("tú")
+    kw = next(p for p in PALABRAS_CLAVE if p in texto)
+    idx = texto.index(kw) + len(kw)
     accion = texto[idx:].strip().lstrip(",").strip()
     print(f"  Accion: '{accion}'")
 
