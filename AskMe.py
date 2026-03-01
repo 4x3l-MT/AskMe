@@ -38,8 +38,8 @@ from urllib.parse import quote_plus
 # ══════════════════════════════════════════════════════════
 #  CONFIGURACION — EDITA ESTOS VALORES
 # ══════════════════════════════════════════════════════════
-SPOTIFY_CLIENT_ID     = "d4784bc8ed6441a6b2a7fa11d65cf592"
-SPOTIFY_CLIENT_SECRET = "2bf57d1288ef421c8dca3a60cc285b28"
+SPOTIFY_CLIENT_ID     = "Tu_id"
+SPOTIFY_CLIENT_SECRET = "Tu_secret"
 SPOTIFY_REDIRECT_URI  = "http://127.0.0.1:8888/callback"
 # ══════════════════════════════════════════════════════════
 
@@ -538,4 +538,5 @@ def main():
     print("Hasta luego!")
 
 if __name__ == "__main__":
+
     main()
